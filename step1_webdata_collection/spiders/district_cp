@@ -1,0 +1,27 @@
+import scrapy 
+import re
+import math
+class DistrictSpider(scrapy.Spider):
+    name="District"
+    def start_requests(self):
+        urls='http://www.ysxiao.cn/c/201910/32217.html'
+        yield scrapy.Request(url=urls,callback=self.parse)
+    def parse(self,response):
+        Dlist=response.css('table').css('td::text').getall()
+        Districts=[Dlist[m] for m in range(len(Dlist)) if m%2==1]
+        hrefs=response.css('table').css('a::attr(href)').getall()
+        DistrictDict={}
+        for id,district in enumerate(Districts[:1]):
+            yield response.follow(hrefs[id],callback=self.parse_district)
+        yield DistrictDict
+    def parse_district(self,response):
+        schoollist=response.css('table').css('td::text').getall()
+        schools=[schoollist[m] for m in range(len(schoollist)) if m%2==1]
+        hrefs=response.css('table').css('a::attr(href)').getall()
+        for href in hrefs:
+            yield response.follow(href,callback=self.parse_school)
+        yield {'http':hrefs}
+    def parse_school(self,response):
+        school=response.css('div.content h2::text').getall()
+        addresslist=response.css('div.content p::text').getall()[1:-4]
+        yield {'school':school,'area':addresslist}
